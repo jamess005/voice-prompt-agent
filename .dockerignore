@@ -1,10 +1,55 @@
-.venv/
-logs/
-models/
+# Secrets & local config
 .env
+
+# Python artefacts
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Local model weights (mounted at runtime via volume)
+models/
+*.gguf
+*.safetensors
+*.bin
+*.pt
+.cache/
+
+# Logs (may contain sensitive transcription data)
+logs/
+*.log
+
+# VCS & CI
 .git/
+.github/
+.gitignore
+.dockerignore
+
+# IDE
 .idea/
 .vscode/
-*.log
+*.swp
+*.swo
+
+# Docs & host-only files (not needed at runtime)
+docs/
+README.md
+LICENSE
+voiceagent.desktop
+run.sh
+
+# Linting config (only used in CI)
+pyproject.toml
+
+# Git worktrees
+.worktrees/
+
+# OS
+.DS_Store
+Thumbs.db

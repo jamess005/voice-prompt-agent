@@ -10,6 +10,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Drop root: create a non-privileged user and hand over the workdir
+RUN useradd --create-home --shell /bin/bash --uid 1001 appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
 ENV DISPLAY=:0
 ENV WHISPER_MODEL=small
 ENV MODEL_PATH=/models
