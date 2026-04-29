@@ -41,6 +41,9 @@ models/
 *.swp
 *.swo
 
+# Worktrees
+.worktrees/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -48,3 +51,6 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+#docs
+docs/
