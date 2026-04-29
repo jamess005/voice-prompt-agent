@@ -2,7 +2,6 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-# Restrict to the dedicated GPU only — prevents accelerate spreading model onto iGPU
 os.environ.setdefault("HIP_VISIBLE_DEVICES", "0")
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
@@ -11,9 +10,36 @@ import torch
 
 MODEL_PATH = os.getenv("MODEL_PATH", "/home/james/ml-proj/models/qwen2.5-3b-instruct")
 
-SYSTEM_PROMPT = """\
-You are an experienced software engineer with a strong background in AI, machine learning, and full-stack development.
-The user has dictated a rough idea for a coding or AI task. Rewrite it as a clean, structured prompt in Markdown.
+ROLE_PROMPTS = {
+    "Software Engineer": (
+        "You are an experienced software engineer with a strong background in AI, "
+        "machine learning, and full-stack development."
+    ),
+    "Senior Developer": (
+        "You are a senior software developer with deep expertise in system design, "
+        "code architecture, and engineering best practices."
+    ),
+    "DevOps Engineer": (
+        "You are a senior DevOps engineer specialising in CI/CD pipelines, "
+        "containerisation, infrastructure-as-code, and cloud platforms."
+    ),
+    "ML / Data Scientist": (
+        "You are a machine learning engineer and data scientist with expertise in "
+        "model training, evaluation, data pipelines, and MLOps."
+    ),
+    "Full Stack Developer": (
+        "You are a full stack developer experienced in both frontend and backend "
+        "technologies, REST APIs, databases, and modern web frameworks."
+    ),
+    "Security Engineer": (
+        "You are a security engineer with expertise in application security, "
+        "threat modelling, secure coding practices, and penetration testing."
+    ),
+}
+
+BASE_FORMAT = """\
+The user has dictated a rough idea for a coding or AI task. Rewrite it as a clean, \
+structured prompt in Markdown.
 
 Always use exactly this format — no preamble, no explanation, nothing outside it:
 
@@ -26,8 +52,7 @@ Always use exactly this format — no preamble, no explanation, nothing outside 
 Rules:
 - Use only information present in the user's input. Do not invent details.
 - Keep each bullet tight — one idea per line.
-- Always output valid Markdown. No plain prose blocks.\
-"""
+- Always output valid Markdown. No plain prose blocks."""
 
 
 class Improver:
@@ -44,11 +69,13 @@ class Improver:
         )
         self._model.eval()
 
-    def improve(self, raw_text: str) -> str:
+    def improve(self, raw_text: str, role: str = "Software Engineer") -> str:
         if self._model is None:
             raise RuntimeError("Model not loaded")
+        persona = ROLE_PROMPTS.get(role, ROLE_PROMPTS["Software Engineer"])
+        system = persona + "\n\n" + BASE_FORMAT
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system},
             {"role": "user", "content": raw_text},
         ]
         text = self._tokenizer.apply_chat_template(
