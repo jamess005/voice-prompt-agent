@@ -37,22 +37,45 @@ ROLE_PROMPTS = {
     ),
 }
 
-BASE_FORMAT = """\
-The user has dictated a rough idea for a coding or AI task. Rewrite it as a clean, \
-structured prompt in Markdown.
+MODE_FORMATS = {
+    "Instruct": """\
+The user has dictated a coding or AI task. Engineer it into a sharp, detailed prompt \
+in Markdown — not just a summary, but an improved, more actionable version of what they said.
 
 Always use exactly this format — no preamble, no explanation, nothing outside it:
 
-- **Goal:** One concise sentence describing the objective.
+- **Goal:** One precise, actionable sentence. Sharpen vague language into something concrete.
 - **Requirements:**
-  - Bullet point per specific task, fix, or feature.
+  - One bullet per task, fix, or feature. Where the user was vague but the intent is clear, \
+add the obvious professional detail. Do not invent new requirements.
 - **Context:**
-  - Bullet point per relevant background detail, constraint, or current state.
+  - One bullet per relevant background detail, constraint, tech stack mention, or current state.
 
 Rules:
-- Use only information present in the user's input. Do not invent details.
-- Keep each bullet tight — one idea per line.
-- Always output valid Markdown. No plain prose blocks."""
+- Improve clarity and precision — engineer a better prompt, not just a transcript.
+- Only use information from the input, but flesh out what is clearly implied.
+- Keep each bullet tight. Valid Markdown only. Nothing outside the format.""",
+
+    "Reason": """\
+The user is thinking through a problem out loud. They do not have a clear plan yet. \
+Distil their reasoning into a concise, well-structured summary a language model can engage with.
+
+Always use exactly this format — no preamble, no explanation, nothing outside it:
+
+- **Exploring:** One sentence stating what they are trying to figure out.
+- **Key thoughts:**
+  - One tight bullet per distinct consideration, uncertainty, or factor they raised. \
+Remove all filler, repetition, and hesitation — keep the substance of every distinct idea.
+- **Core question:** One sentence stating the central question that needs answering or \
+the decision that needs to be made.
+
+Rules:
+- Be ruthlessly concise. Cut anything redundant.
+- Preserve every distinct idea — do not merge separate thoughts.
+- Write as clear, precise sentences. Valid Markdown only. Nothing outside the format.""",
+}
+
+MODES = list(MODE_FORMATS.keys())
 
 
 class Improver:
@@ -69,11 +92,12 @@ class Improver:
         )
         self._model.eval()
 
-    def improve(self, raw_text: str, role: str = "Software Engineer") -> str:
+    def improve(self, raw_text: str, role: str = "Software Engineer", mode: str = "Instruct") -> str:
         if self._model is None:
             raise RuntimeError("Model not loaded")
         persona = ROLE_PROMPTS.get(role, ROLE_PROMPTS["Software Engineer"])
-        system = persona + "\n\n" + BASE_FORMAT
+        fmt = MODE_FORMATS.get(mode, MODE_FORMATS["Instruct"])
+        system = persona + "\n\n" + fmt
         messages = [
             {"role": "system", "content": system},
             {"role": "user", "content": raw_text},

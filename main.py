@@ -4,7 +4,7 @@ import customtkinter as ctk
 
 from recorder import Recorder
 from transcriber import Transcriber
-from improver import Improver, ROLE_PROMPTS
+from improver import Improver, ROLE_PROMPTS, MODES
 from logger import log_session
 
 ctk.set_appearance_mode("dark")
@@ -23,9 +23,9 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Voice Prompt")
-        self.geometry("680x600")
+        self.geometry("820x600")
         self.resizable(True, True)
-        self.minsize(500, 440)
+        self.minsize(600, 440)
 
         self._transcriber = Transcriber()
         self._improver = Improver()
@@ -45,7 +45,14 @@ class App(ctk.CTk):
         self._status = ctk.CTkLabel(top, text="Ready", font=("Helvetica", 13), anchor="w")
         self._status.pack(side="left", fill="x", expand=True)
 
-        ctk.CTkLabel(top, text="Role:", font=("Helvetica", 12)).pack(side="left", padx=(8, 4))
+        ctk.CTkLabel(top, text="Mode:", font=("Helvetica", 12)).pack(side="left", padx=(8, 4))
+        self._mode_var = ctk.StringVar(value=MODES[0])
+        ctk.CTkSegmentedButton(
+            top, values=MODES, variable=self._mode_var,
+            font=("Helvetica", 12), width=180,
+        ).pack(side="left", padx=(0, 12))
+
+        ctk.CTkLabel(top, text="Role:", font=("Helvetica", 12)).pack(side="left", padx=(0, 4))
         self._role_var = ctk.StringVar(value=ROLES[0])
         self._role_menu = ctk.CTkOptionMenu(
             top, values=ROLES, variable=self._role_var, width=180,
@@ -162,6 +169,7 @@ class App(ctk.CTk):
         if not raw:
             return
         role = self._role_var.get()
+        mode = self._mode_var.get()
         if not self._models_loaded:
             self._status.configure(text="Loading model...")
             threading.Thread(
@@ -171,8 +179,8 @@ class App(ctk.CTk):
         self._state = IMPROVING
         for w in self._btn_frame.winfo_children():
             w.pack_forget()
-        self._status.configure(text=f"Improving as {role}...")
-        threading.Thread(target=self._do_improve, args=(raw, role), daemon=True).start()
+        self._status.configure(text=f"{mode} · {role}...")
+        threading.Thread(target=self._do_improve, args=(raw, role, mode), daemon=True).start()
 
     def _load_improver_then_improve(self, raw, role):
         self._transcriber.load()
@@ -180,8 +188,8 @@ class App(ctk.CTk):
         self._models_loaded = True
         self.after(0, lambda: self._on_improve())
 
-    def _do_improve(self, raw, role):
-        result = self._improver.improve(raw, role)
+    def _do_improve(self, raw, role, mode):
+        result = self._improver.improve(raw, role, mode)
         self.after(0, lambda: self._on_improved(raw, result))
 
     def _on_improved(self, raw, result):
