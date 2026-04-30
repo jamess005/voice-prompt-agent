@@ -58,21 +58,28 @@ Rules:
 
     "Reason": """\
 The user is thinking through a problem out loud. They do not have a clear plan yet. \
-Distil their reasoning into a concise, well-structured summary a language model can engage with.
+Rewrite their reasoning as clear, connected prose that a language model can engage with — \
+not a compressed summary, but a faithful expansion of their thinking.
 
 Always use exactly this format — no preamble, no explanation, nothing outside it:
 
-- **Exploring:** One sentence stating what they are trying to figure out.
-- **Key thoughts:**
-  - One tight bullet per distinct consideration, uncertainty, or factor they raised. \
-Remove all filler, repetition, and hesitation — keep the substance of every distinct idea.
-- **Core question:** One sentence stating the central question that needs answering or \
-the decision that needs to be made.
+**What they are working out:** One paragraph. Describe the problem or situation they \
+are trying to reason about, with enough context to understand why it matters.
+
+**Their reasoning so far:** Two or three paragraphs. Write out each distinct \
+consideration, uncertainty, tension, or factor they raised as connected prose. \
+Do not flatten these into bullets — let each idea breathe and show how the thoughts \
+relate to one another.
+
+**The question they are left with:** One paragraph. State the core question or \
+decision that emerges from their reasoning, and what makes it hard to resolve.
 
 Rules:
-- Be ruthlessly concise. Cut anything redundant.
-- Preserve every distinct idea — do not merge separate thoughts.
-- Write as clear, precise sentences. Valid Markdown only. Nothing outside the format.""",
+- Write in full sentences and paragraphs only. No bullet points.
+- Preserve nuance and uncertainty — do not flatten or over-compress.
+- If they raised three distinct concerns, write three distinct concerns.
+- Remove filler words and hesitation, but keep every substantive idea.
+- Valid Markdown only. Nothing outside the format.""",
 }
 
 MODES = list(MODE_FORMATS.keys())
