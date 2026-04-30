@@ -3,7 +3,10 @@ import threading
 import customtkinter as ctk
 
 from note_reader import load_notes, pick_random_note
-from confidence import load_scores, save_scores, update_score, pick_by_confidence, score_key
+from confidence import (
+    load_scores, save_scores, update_score, pick_by_confidence, score_key,
+    load_exclusions, save_exclusions,
+)
 
 _LATEX_SYMBOLS = [
     # Set operations
@@ -61,6 +64,15 @@ class StudyTab:
     def _load_data(self):
         self._notes = load_notes()
         self._scores = load_scores()
+        self._excluded: set[str] = load_exclusions()
+
+    def _filtered_notes(self) -> dict:
+        return {
+            subject: {t: c for t, c in topics.items()
+                      if score_key(subject, t) not in self._excluded}
+            for subject, topics in self._notes.items()
+            if any(score_key(subject, t) not in self._excluded for t in topics)
+        }
 
     # ── UI construction ──────────────────────────────────────────────────────
 
@@ -167,6 +179,10 @@ class StudyTab:
         ctk.CTkButton(
             self._nav_row, text="Change topic", width=130, height=40,
             fg_color="#555", command=self._show_setup,
+        ).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(
+            self._nav_row, text="Exclude note", width=120, height=40,
+            fg_color="#8B0000", command=self._on_exclude,
         ).pack(side="left")
 
     def _on_selection_mode_change(self):
@@ -197,16 +213,23 @@ class StudyTab:
     # ── Handlers ─────────────────────────────────────────────────────────────
 
     def _on_start(self):
-        if not self._notes:
-            self._status.configure(text="No notes found in ~/uni/")
+        notes = self._filtered_notes()
+        if not notes:
+            self._status.configure(
+                text="No notes available — all excluded or ~/uni/ is empty."
+            )
             return
         mode = self._sel_var.get()
         if mode == "Manual":
-            self._current = pick_random_note(self._notes, subject=self._subject_var.get())
+            subject = self._subject_var.get()
+            if subject not in notes:
+                self._status.configure(text=f"All notes in {subject!r} are excluded.")
+                return
+            self._current = pick_random_note(notes, subject=subject)
         elif mode == "Random":
-            self._current = pick_random_note(self._notes)
+            self._current = pick_random_note(notes)
         else:
-            self._current = pick_by_confidence(self._notes, self._scores)
+            self._current = pick_by_confidence(notes, self._scores)
         self._show_session()
         self._generate_question()
 
@@ -306,11 +329,29 @@ class StudyTab:
         self._result_box.pack_forget()
         self._conf_frame.pack_forget()
         self._nav_row.pack_forget()
+        notes = self._filtered_notes()
+        if not notes:
+            self._show_setup()
+            self._status.configure(text="All notes excluded — unexclude some to continue.")
+            return
         mode = self._sel_var.get()
         if mode == "Manual":
-            self._current = pick_random_note(self._notes, subject=self._subject_var.get())
+            subject = self._subject_var.get()
+            if subject not in notes:
+                self._show_setup()
+                self._status.configure(text=f"All notes in {subject!r} are excluded.")
+                return
+            self._current = pick_random_note(notes, subject=subject)
         elif mode == "Random":
-            self._current = pick_random_note(self._notes)
+            self._current = pick_random_note(notes)
         else:
-            self._current = pick_by_confidence(self._notes, self._scores)
+            self._current = pick_by_confidence(notes, self._scores)
         self._generate_question()
+
+    def _on_exclude(self):
+        subject, topic, _ = self._current
+        self._excluded.add(score_key(subject, topic))
+        threading.Thread(
+            target=save_exclusions, args=(self._excluded,), daemon=True
+        ).start()
+        self._on_next()

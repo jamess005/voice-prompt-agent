@@ -4,6 +4,7 @@ from pathlib import Path
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CONFIDENCE_FILE = DATA_DIR / "confidence.json"
+EXCLUSIONS_FILE = DATA_DIR / "exclusions.json"
 
 
 def load_scores() -> dict[str, float]:
@@ -45,3 +46,14 @@ def pick_by_confidence(
 
 def score_key(subject: str, topic: str) -> str:
     return f"{subject}/{topic}"
+
+
+def load_exclusions() -> set[str]:
+    if not EXCLUSIONS_FILE.exists():
+        return set()
+    return set(json.loads(EXCLUSIONS_FILE.read_text(encoding="utf-8")))
+
+
+def save_exclusions(excluded: set[str]) -> None:
+    DATA_DIR.mkdir(exist_ok=True)
+    EXCLUSIONS_FILE.write_text(json.dumps(sorted(excluded), indent=2), encoding="utf-8")

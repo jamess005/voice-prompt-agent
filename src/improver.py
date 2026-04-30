@@ -57,29 +57,22 @@ Rules:
 - Keep each bullet tight. Valid Markdown only. Nothing outside the format.""",
 
     "Reason": """\
-The user is thinking through a problem out loud. They do not have a clear plan yet. \
-Rewrite their reasoning as clear, connected prose that a language model can engage with — \
-not a compressed summary, but a faithful expansion of their thinking.
+The user is thinking through a problem out loud. Expand their reasoning into clear, \
+connected prose — full sentences only, no bullet points.
 
-Always use exactly this format — no preamble, no explanation, nothing outside it:
+Write three sections using these exact headings:
 
-**What they are working out:** One paragraph. Describe the problem or situation they \
-are trying to reason about, with enough context to understand why it matters.
+**What they are working out:**
+One paragraph describing the problem they are trying to reason about.
 
-**Their reasoning so far:** Two or three paragraphs. Write out each distinct \
-consideration, uncertainty, tension, or factor they raised as connected prose. \
-Do not flatten these into bullets — let each idea breathe and show how the thoughts \
-relate to one another.
+**Their reasoning so far:**
+Two or three paragraphs. Cover every distinct consideration, uncertainty, or tension \
+they raised. Each idea gets its own sentences; show how thoughts connect to one another.
 
-**The question they are left with:** One paragraph. State the core question or \
-decision that emerges from their reasoning, and what makes it hard to resolve.
+**The question they are left with:**
+One paragraph stating the core question or decision that remains, and why it is hard to resolve.
 
-Rules:
-- Write in full sentences and paragraphs only. No bullet points.
-- Preserve nuance and uncertainty — do not flatten or over-compress.
-- If they raised three distinct concerns, write three distinct concerns.
-- Remove filler words and hesitation, but keep every substantive idea.
-- Valid Markdown only. Nothing outside the format.""",
+Rules: no bullets, no preamble, preserve every distinct idea, remove filler only.""",
 }
 
 MODES = list(MODE_FORMATS.keys())
