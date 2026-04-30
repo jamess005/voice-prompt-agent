@@ -1,5 +1,4 @@
 import pytest
-from pathlib import Path
 from src.note_reader import load_notes, pick_random_note
 
 @pytest.fixture
