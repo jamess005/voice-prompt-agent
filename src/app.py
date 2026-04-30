@@ -6,6 +6,7 @@ from recorder import Recorder
 from transcriber import Transcriber
 from improver import Improver, ROLE_PROMPTS, MODES
 from logger import log_session
+from study_tab import StudyTab
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -38,9 +39,14 @@ class App(ctk.CTk):
     # ── UI ───────────────────────────────────────────────────────────────────
 
     def _build_ui(self):
-        # Top bar: status + role selector
-        top = ctk.CTkFrame(self, fg_color="transparent")
-        top.pack(fill="x", padx=12, pady=(12, 4))
+        self._tabs = ctk.CTkTabview(self, anchor="nw")
+        self._tabs.pack(fill="both", expand=True, padx=8, pady=8)
+
+        # ── Prompt tab ───────────────────────────────────────────────────────
+        prompt_tab = self._tabs.add("Prompt")
+
+        top = ctk.CTkFrame(prompt_tab, fg_color="transparent")
+        top.pack(fill="x", padx=4, pady=(8, 4))
 
         self._status = ctk.CTkLabel(top, text="Ready", font=("Helvetica", 13), anchor="w")
         self._status.pack(side="left", fill="x", expand=True)
@@ -60,15 +66,13 @@ class App(ctk.CTk):
         )
         self._role_menu.pack(side="left")
 
-        # Text box — expands to fill available space, word wrap
         self._textbox = ctk.CTkTextbox(
-            self, font=("Helvetica", 13), wrap="word",
+            prompt_tab, font=("Helvetica", 13), wrap="word",
         )
-        self._textbox.pack(fill="both", expand=True, padx=12, pady=(4, 8))
+        self._textbox.pack(fill="both", expand=True, padx=4, pady=(4, 8))
 
-        # Button row
-        self._btn_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self._btn_frame.pack(pady=(0, 12))
+        self._btn_frame = ctk.CTkFrame(prompt_tab, fg_color="transparent")
+        self._btn_frame.pack(pady=(0, 8))
 
         self._record_btn = ctk.CTkButton(
             self._btn_frame, text="● Record", width=140, height=44,
@@ -95,8 +99,11 @@ class App(ctk.CTk):
             self._btn_frame, text="Copy", width=80, height=44,
             command=self._on_copy,
         )
-
         self._set_idle_buttons()
+
+        # ── Study tab ────────────────────────────────────────────────────────
+        study_tab = self._tabs.add("Study")
+        StudyTab(study_tab, self._recorder, self._transcriber, self._improver)
 
     def _set_idle_buttons(self):
         for w in self._btn_frame.winfo_children():
