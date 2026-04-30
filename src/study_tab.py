@@ -42,6 +42,7 @@ SETUP = "setup"
 GENERATING = "generating"
 READY = "ready"
 RECORDING = "recording"
+TRANSCRIBED = "transcribed"
 EVALUATING = "evaluating"
 RESULT = "result"
 
@@ -136,17 +137,18 @@ class StudyTab:
 
         self._question_label = ctk.CTkLabel(
             self._session_frame, text="", font=("Helvetica", 15, "bold"),
-            wraplength=580, justify="left",
+            wraplength=620, justify="center",
         )
-        self._question_label.pack(anchor="w", pady=(0, 4))
+        self._question_label.pack(pady=(8, 4))
 
         self._source_label = ctk.CTkLabel(
             self._session_frame, text="", font=("Helvetica", 11), text_color="gray",
         )
-        self._source_label.pack(anchor="w", pady=(0, 12))
+        self._source_label.pack(pady=(0, 16))
 
+        # Record / Stop row
         self._record_row = ctk.CTkFrame(self._session_frame, fg_color="transparent")
-        self._record_row.pack(anchor="w", pady=(0, 12))
+        self._record_row.pack(pady=(0, 8))
 
         self._record_btn = ctk.CTkButton(
             self._record_row, text="● Record", width=130, height=44,
@@ -160,11 +162,38 @@ class StudyTab:
             command=self._on_stop,
         )
 
+        # Editable answer box (shown after transcription, hidden otherwise)
+        ctk.CTkLabel(
+            self._session_frame, text="Your answer:", font=("Helvetica", 11),
+            text_color="gray",
+        ).pack()
+        self._answer_box = ctk.CTkTextbox(
+            self._session_frame, width=600, height=90,
+            font=("Helvetica", 13), wrap="word",
+        )
+
+        # Submit / Re-record row (shown in TRANSCRIBED state)
+        self._submit_row = ctk.CTkFrame(self._session_frame, fg_color="transparent")
+        ctk.CTkButton(
+            self._submit_row, text="Submit →", width=120, height=40,
+            font=("Helvetica", 13, "bold"), command=self._on_submit,
+        ).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(
+            self._submit_row, text="Re-record", width=110, height=40,
+            fg_color="#555", command=self._on_rerecord,
+        ).pack(side="left")
+
+        # Feedback box (read-only, shown after evaluation)
+        ctk.CTkLabel(
+            self._session_frame, text="Feedback:", font=("Helvetica", 11),
+            text_color="gray",
+        ).pack()
         self._result_box = ctk.CTkTextbox(
-            self._session_frame, width=580, height=160,
+            self._session_frame, width=600, height=140,
             font=("Helvetica", 13), wrap="word", state="disabled",
         )
 
+        # Confidence bar
         self._conf_frame = ctk.CTkFrame(self._session_frame, fg_color="transparent")
         ctk.CTkLabel(
             self._conf_frame, text="Confidence:", font=("Helvetica", 11)
@@ -177,6 +206,7 @@ class StudyTab:
         )
         self._conf_label.pack(side="left", padx=(6, 0))
 
+        # Next / Change topic / Exclude row
         self._nav_row = ctk.CTkFrame(self._session_frame, fg_color="transparent")
         ctk.CTkButton(
             self._nav_row, text="Next →", width=110, height=40,
@@ -209,6 +239,8 @@ class StudyTab:
 
     def _show_session(self):
         self._setup_frame.pack_forget()
+        self._answer_box.pack_forget()
+        self._submit_row.pack_forget()
         self._result_box.pack_forget()
         self._conf_frame.pack_forget()
         self._nav_row.pack_forget()
@@ -279,25 +311,53 @@ class StudyTab:
     def _on_stop(self):
         if self._state != RECORDING:
             return
-        self._state = EVALUATING
+        self._state = TRANSCRIBED
         audio = self._recorder.stop()
         self._stop_btn.pack_forget()
         self._record_btn.pack(side="left", padx=(0, 8))
         self._record_btn.configure(state="disabled")
         self._status.configure(text="Transcribing...")
-        threading.Thread(
-            target=self._do_transcribe_and_evaluate, args=(audio,), daemon=True
-        ).start()
+        threading.Thread(target=self._do_transcribe, args=(audio,), daemon=True).start()
 
-    def _do_transcribe_and_evaluate(self, audio):
+    def _do_transcribe(self, audio):
         if self._transcriber._model is None:
             self._frame.after(0, lambda: self._status.configure(text="Loading transcriber..."))
             self._transcriber.load()
         text = self._transcriber.transcribe(audio)
-        self._frame.after(0, lambda: self._status.configure(text="Evaluating..."))
+        self._frame.after(0, lambda: self._on_transcribed(text))
+
+    def _on_transcribed(self, text: str):
+        self._answer_box.configure(state="normal")
+        self._answer_box.delete("1.0", "end")
+        self._answer_box.insert("1.0", text)
+        self._answer_box.pack(pady=(0, 8))
+        self._submit_row.pack(pady=(0, 8))
+        self._record_btn.configure(state="normal")
+        self._state = TRANSCRIBED
+        self._status.configure(text="Review your answer, then submit.")
+
+    def _on_submit(self):
+        answer = self._answer_box.get("1.0", "end").strip()
+        if not answer:
+            return
+        self._state = EVALUATING
+        self._submit_row.pack_forget()
+        self._record_btn.configure(state="disabled")
+        self._status.configure(text="Evaluating...")
         _, _, content = self._current
-        result = self._improver.evaluate_answer(self._current_question, content, text)
+        threading.Thread(
+            target=self._do_evaluate, args=(answer, content), daemon=True
+        ).start()
+
+    def _do_evaluate(self, answer: str, content: str):
+        result = self._improver.evaluate_answer(self._current_question, content, answer)
         self._frame.after(0, lambda: self._on_result(result))
+
+    def _on_rerecord(self):
+        self._answer_box.pack_forget()
+        self._submit_row.pack_forget()
+        self._state = READY
+        self._status.configure(text="Record your answer")
 
     def _on_result(self, result: str):
         subject, topic, _ = self._current
@@ -319,19 +379,24 @@ class StudyTab:
         self._conf_bar.set(score)
         self._conf_label.configure(text=f"{int(score * 100)}%")
 
+        self._answer_box.pack_forget()
+        self._submit_row.pack_forget()
+
         self._result_box.configure(state="normal")
         self._result_box.delete("1.0", "end")
         self._result_box.insert("1.0", _render_latex(result))
         self._result_box.configure(state="disabled")
         self._result_box.pack(pady=(0, 8))
-        self._conf_frame.pack(anchor="w", pady=(0, 8))
-        self._nav_row.pack(anchor="w")
+        self._conf_frame.pack(pady=(0, 8))
+        self._nav_row.pack(pady=(0, 8))
 
         self._state = RESULT
         self._status.configure(text="")
         self._record_btn.configure(state="normal")
 
     def _on_next(self):
+        self._answer_box.pack_forget()
+        self._submit_row.pack_forget()
         self._result_box.pack_forget()
         self._conf_frame.pack_forget()
         self._nav_row.pack_forget()
