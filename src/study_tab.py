@@ -1,8 +1,36 @@
+import re
 import threading
 import customtkinter as ctk
 
 from note_reader import load_notes, pick_random_note
 from confidence import load_scores, save_scores, update_score, pick_by_confidence, score_key
+
+_LATEX_SYMBOLS = [
+    # Set operations
+    (r"\cup", "∪"), (r"\cap", "∩"), (r"\setminus", "∖"), (r"\emptyset", "∅"),
+    # Relations
+    (r"\subseteq", "⊆"), (r"\supseteq", "⊇"), (r"\subset", "⊂"), (r"\supset", "⊃"),
+    (r"\in", "∈"), (r"\notin", "∉"),
+    # Logic
+    (r"\forall", "∀"), (r"\exists", "∃"), (r"\neg", "¬"), (r"\land", "∧"), (r"\lor", "∨"),
+    (r"\Rightarrow", "⟹"), (r"\rightarrow", "→"),
+    (r"\Leftrightarrow", "⟺"), (r"\leftrightarrow", "↔"),
+    # Misc math
+    (r"\times", "×"), (r"\infty", "∞"), (r"\mathbb{N}", "ℕ"), (r"\mathbb{Z}", "ℤ"),
+    (r"\mathbb{R}", "ℝ"), (r"\mathbb{Q}", "ℚ"),
+    # Braces
+    (r"\{", "{"), (r"\}", "}"),
+]
+
+
+def _render_latex(text: str) -> str:
+    """Replace common LaTeX math commands with Unicode equivalents."""
+    for latex, symbol in _LATEX_SYMBOLS:
+        text = text.replace(latex, symbol)
+    # Strip inline/display math delimiters
+    text = re.sub(r"\\\(|\\\)", "", text)
+    text = re.sub(r"\\\[|\\\]", "", text)
+    return text
 
 SETUP = "setup"
 GENERATING = "generating"
@@ -261,7 +289,7 @@ class StudyTab:
 
         self._result_box.configure(state="normal")
         self._result_box.delete("1.0", "end")
-        self._result_box.insert("1.0", result)
+        self._result_box.insert("1.0", _render_latex(result))
         self._result_box.configure(state="disabled")
         self._result_box.pack(pady=(0, 8))
         self._conf_frame.pack(anchor="w", pady=(0, 8))
