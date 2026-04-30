@@ -8,6 +8,7 @@ from confidence import load_scores, save_scores, update_score, pick_by_confidenc
 _LATEX_SYMBOLS = [
     # Set operations
     (r"\cup", "∪"), (r"\cap", "∩"), (r"\setminus", "∖"), (r"\emptyset", "∅"),
+    (r"\bigoplus", "⊕"), (r"\oplus", "⊕"), (r"\triangle", "△"),
     # Relations
     (r"\subseteq", "⊆"), (r"\supseteq", "⊇"), (r"\subset", "⊂"), (r"\supset", "⊃"),
     (r"\in", "∈"), (r"\notin", "∉"),
@@ -27,9 +28,11 @@ def _render_latex(text: str) -> str:
     """Replace common LaTeX math commands with Unicode equivalents."""
     for latex, symbol in _LATEX_SYMBOLS:
         text = text.replace(latex, symbol)
-    # Strip inline/display math delimiters
+    # Strip \(...\) and \[...\] delimiters
     text = re.sub(r"\\\(|\\\)", "", text)
     text = re.sub(r"\\\[|\\\]", "", text)
+    # Strip $...$ and $$...$$ delimiters
+    text = re.sub(r"\$\$|\$", "", text)
     return text
 
 SETUP = "setup"
