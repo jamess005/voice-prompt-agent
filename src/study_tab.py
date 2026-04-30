@@ -190,6 +190,9 @@ class StudyTab:
         ).start()
 
     def _do_generate(self, content: str, style: str):
+        if self._improver._model is None:
+            self._frame.after(0, lambda: self._status.configure(text="Loading model..."))
+            self._improver.load()
         question = self._improver.generate_question(content, style)
         self._frame.after(0, lambda: self._on_question_ready(question))
 
@@ -227,6 +230,9 @@ class StudyTab:
         ).start()
 
     def _do_transcribe_and_evaluate(self, audio):
+        if self._transcriber._model is None:
+            self._frame.after(0, lambda: self._status.configure(text="Loading transcriber..."))
+            self._transcriber.load()
         text = self._transcriber.transcribe(audio)
         self._frame.after(0, lambda: self._status.configure(text="Evaluating..."))
         _, _, content = self._current
